@@ -23,85 +23,77 @@ import org.json4s._
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.client.HBaseAdmin
 
 object MyAdditions {
 
-  /** Defines, if catalog is equal to existing Hbase table
-   * returns false in Hbase table doesnt exist
-   */
-  def isEqual(cat: String): Boolean = {
 
-    val conf = HBaseConfiguration.create()
-
-    val connection = ConnectionFactory.createConnection(conf)
+  /**
+    * Defines, if catalog is equal to existing Hbase table
+    * returns false in Hbase table doesnt exist
+    * @param cat
+    * @param admin
+    * @return
+    */
+  def isEqual(cat: String, admin: HBaseAdmin): Boolean = {
 
     val jObj = parse(cat).asInstanceOf[JObject]
-
     val col = for {
       JObject(column) <- jObj
       JField("cf", JString(cf)) <- column
     } yield cf
-
-    val colBytes1 = col.tail.map(e => e.getBytes)
+    val colBytes1 = col.tail.map(_.getBytes)
     val colBytes: java.util.Set[Array[Byte]] =
       new java.util.HashSet[Array[Byte]]()
     for (elem <- colBytes1) colBytes.add(elem)
     val tN = compact(render(jObj \ "table" \ "name"))
-
     val tableName = tN.substring(1, tN.length - 1)
-    val admin = connection.getAdmin
     if (admin.tableExists(TableName.valueOf(tableName))) {
-      val tableDesc = admin.getTableDescriptor(TableName.valueOf(tableName))
-
-      if (tableDesc.getFamiliesKeys.equals(colBytes)) {
-
+      if (admin
+            .getTableDescriptor(TableName.valueOf(tableName))
+            .getFamiliesKeys
+            .equals(colBytes)) {
         true
       } else {
-
         false
       }
     } else {
-
       false
     }
   }
 
-  /** Defines, if existing Hbase table contains all the column families from catalog,
-   * returns false in Hbase table doesnt exist
-   */
-  def contains(cat: String): Boolean = {
-
-    val conf = HBaseConfiguration.create()
-
-    val connection = ConnectionFactory.createConnection(conf)
+  /**
+    * Defines, if existing Hbase table contains all the column families from catalog,
+    * returns false in Hbase table doesnt exist
+    * @param cat
+    * @param admin
+    * @return
+    */
+  def contains(cat: String, admin: HBaseAdmin): Boolean = {
 
     val jObj = parse(cat).asInstanceOf[JObject]
     val col = for {
       JObject(column) <- jObj
       JField("cf", JString(cf)) <- column
     } yield cf
-
-    val colBytes1 = col.tail.map(e => e.getBytes)
+    val colBytes1 = col.tail.map(_.getBytes)
     val colBytes: java.util.Set[Array[Byte]] =
       new java.util.HashSet[Array[Byte]]()
+
+    colBytes1.foreach(colBytes.add(_))
     for (elem <- colBytes1) colBytes.add(elem)
     val tN = compact(render(jObj \ "table" \ "name"))
-
     val tableName = tN.substring(1, tN.length - 1)
-
-    val admin = connection.getAdmin
     if (admin.tableExists(TableName.valueOf(tableName))) {
-      val tableDesc = admin.getTableDescriptor(TableName.valueOf(tableName))
-
-      if (tableDesc.getFamiliesKeys.containsAll(colBytes)) {
-
+      if (admin
+            .getTableDescriptor(TableName.valueOf(tableName))
+            .getFamiliesKeys
+            .containsAll(colBytes)) {
         true
       } else {
-
         false
       }
     } else {
-
       false
     }
   }

@@ -96,6 +96,7 @@ class DefaultSourceSuite extends SHC with Logging {
     assert(c == 256)
   }
 
+
   test("IN and Not IN filter1") {
     val df = withCatalog(catalog)
     val s = df.filter(($"col0" isin ("row005", "row001", "row002")) and !($"col0" isin ("row001", "row002")))
@@ -356,4 +357,8 @@ class DefaultSourceSuite extends SHC with Logging {
     assert(keys.contains("row100"))
     assert(keys.contains("row57"))
   }
+
+
+
+
 }
